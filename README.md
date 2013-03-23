@@ -2,12 +2,12 @@
 Batch compiling markdown files to html using python-markdown2. 
 ## Usage
 There are 2 versions available. 
-## md-render
+### md-render
 Intended for simple processing. Also includes a basic batch processor. 
 
 * `md-render FILENAME [OUTPUT]` Highlights FILENAME. OUTPUT can be an output file. Defaults to stdout. 
 * `md-render INFOLDER OUTFOLDER` Basic batch processing. Deprecated in favor of md-render2. 
-## md-render2
+### md-render2
 Intended for batch processing bigger directories. 
 
 * `md-render2 INFOLDER OUTFOLDER` Highlight all *.txt, *.md and files without extension in INFOLDER and save them as FILENAME_WITHOUT_EXTENSION.html in OUTFOLDER. Also adds a navigation  of the form /index => /myfolder/index => /myfolder/myfile. 
