@@ -1,8 +1,205 @@
 import markdown2
 import os, sys, shutil
 from bs4 import BeautifulSoup
+import argparse
 
 
+#Find the first heading of some html. 
+def find_title(html, alt=''):
+	parsed = BeautifulSoup(html)
+	i = 1
+	while(i<7):
+		h = parsed.findAll("h"+str(i))
+		if(len(h) > 0):
+			return h[0].get_text()
+		i=i+1
+	return alt
+# Render a bunch of code. 
+def md_render(code):
+	return markdown2.markdown(code, extras=["footnotes", "fenced-code-blocks", "code-friendly"])
+
+#Remove doubles from a list in a quick and fancy way
+# Source: http://www.peterbe.com/plog/uniqifiers-benchmark
+def f7(seq):
+    seen = set()
+    seen_add = seen.add
+    return [ x for x in seq if x not in seen and not seen_add(x)]
+
+# Trys to read a file
+def try_read(name):
+	try:
+		f = open(name)
+		in_code = f.read()
+		f.close()
+	except IOError as e:
+		print "[!] FATAL (READ): I/O error({0}): {1}".format(e.errno, e.strerror)
+		sys.exit(1)
+	except:
+		print "[!] FATAL (READ): Unexpected error:", sys.exc_info()[0]
+		sys.exit(1)
+	return in_code
+
+#Trys to write a file. 
+def try_write(output_file, code):
+	try:
+		directory = os.path.dirname(output_file)
+
+		if not os.path.exists(directory):
+			os.makedirs(directory)
+
+		f=open(output_file, 'w+')
+		f.write(code)
+		f.close()
+	except IOError as e:
+		print "[!] FATAL (WRITE): I/O error({0}): {1}".format(e.errno, e.strerror)
+		sys.exit(1)
+	except:
+		print "[!] FATAL (WRITE): Unexpected error:", sys.exc_info()[0]
+		sys.exit(1)
+
+#Adds a new code file to the list
+def add_code(dic, base, path, output, source):
+	newCode = {"source": source, "render":md_render(source)}
+	newCode["title"] = find_title(newCode["render"])
+	rpath,e = os.path.splitext(os.path.relpath(path, base))
+	plist = [rpath]
+	plist2 = []
+	p = rpath
+	opth,f = os.path.split(p)
+	while 1:
+		p,f=os.path.split(p)
+
+		if f!="":
+			if(p!=''):
+				plist.insert(0, p+"/index")
+				plist2.insert(0, os.path.relpath(p+"/index.html", opth))
+			else:
+				plist.insert(0, "index")
+				plist2.insert(0, os.path.relpath("index.html", opth))
+		else:
+			break
+	newCode["path"] = f7(plist)
+	newCode["pathH"] = f7(plist2)
+	newCode["target"] = os.path.join(output, rpath+".html")
+	dic[rpath] = newCode
+	return dic
+#wrapper function for above
+def iterate_file(base, out_folder, in_file, dic):
+	dic = add_code(dic, base, in_file, out_folder, try_read(in_file))
+	return dic
+	
+#iterate over a folder. 
+def iterate_folder(base, in_folder, out_folder, dic, render_extensions, copycond):
+	for obj in os.listdir(in_folder):
+		if os.path.isfile(os.path.join(in_folder, obj)):
+			fn, fe = os.path.splitext(obj)
+			if(fe[1:] in render_extensions or "*" in render_extensions):	
+				dic = iterate_file(base, out_folder, os.path.join(in_folder, obj), dic)
+				print "[R] "+os.path.join(in_folder, obj)
+			elif copycond(fe[1:]):
+				inp = os.path.join(in_folder, obj)
+				outp = os.path.join(out_folder, fn+fe)
+				shutil.copy(inp, outp)
+				print "[C] "+inp
+
+		else:
+			dic = iterate_folder(base, os.path.join(in_folder, obj), out_folder, dic, render_extensions, copycond)
+	return dic
+
+#Makes the navigational menu
+def make_nav(dic, key):
+	me = dic[key]["path"]
+	mpath = []
+	for i in range(len(me)-1):
+		member = me[i]
+		try:
+			til = dic[member]["title"]
+			mpath.append("["+til+"]("+dic[key]["pathH"][i]+")")
+		except:
+			print "[!] Missing index File: "+member
+			mpath.append(member)
+	mpath.append("**"+dic[key]["title"]+"**")
+	dic[key]["source"] = ' > '.join(mpath) + "\n" + dic[key]["source"]
+	dic[key]["render"] = md_render(dic[key]["source"])
+	return dic
+
+#Creates the output surrounding the actual rendering. 
+def output(dic, key):
+	me = dic[key]
+	output = """<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>"""
+	output += me["title"]
+	output +="""</title>
+		<style type="text/css">
+"""+get_css()+"""
+		</style>
+	</head>
+	<body>
+"""
+	output += me["render"]
+	output += """
+	</body>
+</html>"""
+	try_write(me["target"], output)
+	
+# Main Function running the logic
+def main_run(infolder, outfolder, enable_nav, render_extensions, copycond):
+	dic = iterate_folder(infolder, infolder, outfolder, {}, render_extensions, copycond)
+	for key in dic:
+		if enable_nav:
+			dic = make_nav(dic, key)
+		output(dic, key)
+
+# Main Arg parsing function
+def main(cargs):
+	parser = argparse.ArgumentParser(description='Python Markdown Compiler')
+	parser.add_argument('--no-nav', dest='enable_nav', action='store_const',
+                   const=False, default=True,
+                   help='Do not render the navigation menu. ')
+
+	group0 = parser.add_argument_group('Location', 'Where to find the source, where to put the rendered files. ')
+
+	group0.add_argument('INFOLDER', nargs=1, help='Input folder. ')
+	group0.add_argument('OUTFOLDER', nargs=1, help='Output folder. Will be created if it does not exist. ')
+
+	group1 = parser.add_argument_group('File Selection', 'Which files to render, which to copy. ')
+
+	group1.add_argument('--render', help='Extensions to render. * is a wildcat and means everything. (Default: ["", "txt", "md"])', nargs='*', dest='RENDER', metavar="EXTENSION", default=["", "txt", "md"])
+
+	copygroup = group1.add_mutually_exclusive_group()
+
+	copygroup.add_argument('--copy', help='Extensions to copy. * is a wildcat and means everything. (Default: [])', nargs='*', dest='COPY_INCLUDE', metavar="EXTENSION", default=[])
+
+	copygroup.add_argument('--no-copy', help='Extensions to exclude from copying. (Default: [""])', nargs='*', dest='COPY_EXCLUDE', metavar="EXTENSION", default=[])
+
+	args = parser.parse_args()
+
+	if len(args.COPY_INCLUDE) == 0 and len(args.COPY_EXCLUDE) == 0:
+		copycond = lambda x: False
+	elif len(args.COPY_INCLUDE) == 0:
+		copycond = lambda x: not x in args.COPY_EXCLUDE
+	elif "*" in args.COPY_INCLUDE:
+		copycond = lambda x: True
+	else:
+		copycond = lambda x: x in args.COPY_INCLUDE
+
+	
+	if(os.path.isdir(args.INFOLDER[0])):
+		if(not os.path.isdir(args.OUTFOLDER[0])):
+			try:
+				os.makedirs(args.OUTFOLDER[0])
+			except:
+				print "[!] FATAL: Can't create output folder (Enough permissions?)"
+				sys.exit(1)
+		main_run(args.INFOLDER[0], args.OUTFOLDER[0], args.enable_nav, args.RENDER, copycond)
+	else:
+		print "error: INFOLDER is not a directory. "
+		
+			
+#CSS code stuff
 def get_css():
 	css_code = """/* Basic styles https://gist.github.com/cpatuzzo/3331384 */
 		body {
@@ -460,169 +657,5 @@ def get_css():
 		.il { color: #009999 } /* Literal.Number.Integer.Long */"""
 	return css_code
 
-def find_title(html, alt=''):
-	h1 = BeautifulSoup(html).findAll("h1")
-	if(len(h1) > 0):
-		return h1[0].get_text()
-	else:
-		return alt
-
-def md_render(code):
-	return markdown2.markdown(code, extras=["footnotes", "fenced-code-blocks", "code-friendly"])
-
-def f7(seq):
-    seen = set()
-    seen_add = seen.add
-    return [ x for x in seq if x not in seen and not seen_add(x)]
-
-def try_read(name):
-	try:
-		f = open(name)
-		in_code = f.read()
-		f.close()
-	except IOError as e:
-		print "[!] FATAL (READ): I/O error({0}): {1}".format(e.errno, e.strerror)
-		sys.exit(1)
-	except:
-		print "[!] FATAL (READ): Unexpected error:", sys.exc_info()[0]
-		sys.exit(1)
-	return in_code
-
-def try_write(output_file, code):
-	try:
-		directory = os.path.dirname(output_file)
-
-		if not os.path.exists(directory):
-			os.makedirs(directory)
-
-		f=open(output_file, 'w+')
-		f.write(code)
-		f.close()
-	except IOError as e:
-		print "[!] FATAL (WRITE): I/O error({0}): {1}".format(e.errno, e.strerror)
-		sys.exit(1)
-	except:
-		print "[!] FATAL (WRITE): Unexpected error:", sys.exc_info()[0]
-		sys.exit(1)
-
-def add_code(dic, base, path, output, source):
-	newCode = {"source": source, "render":md_render(source)}
-	newCode["title"] = find_title(newCode["render"])
-	rpath,e = os.path.splitext(os.path.relpath(path, base))
-	plist = [rpath]
-	plist2 = []
-	p = rpath
-	opth,f = os.path.split(p)
-	while 1:
-		p,f=os.path.split(p)
-
-		if f!="":
-			if(p!=''):
-				plist.insert(0, p+"/index")
-				plist2.insert(0, os.path.relpath(p+"/index.html", opth))
-			else:
-				plist.insert(0, "index")
-				plist2.insert(0, os.path.relpath("index.html", opth))
-		else:
-			break
-	newCode["path"] = f7(plist)
-	newCode["pathH"] = f7(plist2)
-	newCode["target"] = os.path.join(output, rpath+".html")
-	dic[rpath] = newCode
-	return dic
-
-def iterate_file(base, out_folder, in_file, dic):
-	dic = add_code(dic, base, in_file, out_folder, try_read(in_file))
-	return dic
-	
-	
-def iterate_folder(base, in_folder, out_folder, dic):
-	for obj in os.listdir(in_folder):
-		if os.path.isfile(os.path.join(in_folder, obj)):
-			fn, fe = os.path.splitext(obj)
-			if(fe == '' or fe == '.txt' or fe == '.md'):	
-				dic = iterate_file(base, out_folder, os.path.join(in_folder, obj), dic)
-				print "[I] M:"+os.path.join(in_folder, obj)
-			else:
-				inp = os.path.join(in_folder, obj)
-				outp = os.path.join(out_folder, fn)	
-				shutil.copy(inp, outp)
-				print "[I] C:"+inp
-		else:
-			dic = iterate_folder(base, os.path.join(in_folder, obj), out_folder, dic)
-	return dic
-	
-def make_nav(dic, key):
-	me = dic[key]["path"]
-	mpath = []
-	for i in range(len(me)-1):
-		member = me[i]
-		try:
-			til = dic[member]["title"]
-			mpath.append("["+til+"]("+dic[key]["pathH"][i]+")")
-		except:
-			print "[!] Missing index File: "+member
-			mpath.append(member)
-	mpath.append("**"+dic[key]["title"]+"**")
-	dic[key]["source"] = ' > '.join(mpath) + "\n" + dic[key]["source"]
-	dic[key]["render"] = md_render(dic[key]["source"])
-	return dic
-
-def output(dic, key):
-	me = dic[key]
-	output = """<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<title>"""
-	output += me["title"]
-	output +="""</title>
-		<style type="text/css">
-"""+get_css()+"""
-		</style>
-	</head>
-	<body>
-"""
-	output += me["render"]
-	output += """
-	</body>
-</html>"""
-	try_write(me["target"], output)
-	
-
-def main_run(infolder, outfolder):
-	dic = iterate_folder(infolder, infolder, outfolder, {})
-	for key in dic:
-		dic = make_nav(dic, key)
-		output(dic, key)
-
-
-def main(args):
-	if(len(args) > 0):
-		if(args[0] == '--help'):
-			print "Github Markdown Renderer (API Doc Creator)"
-			print "Usage: md-render2 INFOLDER OUTFOLDER"
-			print "       Markup of '', '.txt', '.md' files in INFOLDER. Everything else is copied. "
-			sys.exit(0)
-		fsobj = args[0]
-		if(os.path.isfile(fsobj)):
-			print "[!] FATAL (PARSE_ARGS): Input is a file. Need a folder. "
-			sys.exit(1)
-		elif(os.path.isdir(fsobj)):
-			if(len(args) > 1):
-				main_run(fsobj, args[1])
-				sys.exit(0)
-			else:
-				print "[!] FATAL (PARSE_ARGS): To few arguments: Missing Output folder. "
-				sys.exit(1)
-			
-		else:
-			print "[!] FATAL (PARSE_ARGS): Source File(s) not found. "
-			sys.exit(1)
-	else:
-		print "[!] FATAL: Nothing to do. Type md-render2 --help for help. "
-		sys.exit(1)
-			
-
 if __name__ == "__main__":
-	main(sys.argv[1:])
+	main(sys.argv)

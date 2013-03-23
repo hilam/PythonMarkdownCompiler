@@ -1,17 +1,47 @@
-# PythonMarkdownCompiler
-Batch compiling markdown files to html using python-markdown2. 
+# Python Markdown Compiler
+Batch compiling markdown files to html using python-markdown2. Tested with Python 2.7. 
 ## Usage
 There are 2 versions available. 
 ### md-render
-Intended for simple processing. Also includes a basic batch processor. 
+Deprecated in favor of md-render2. 
 
 * `md-render FILENAME [OUTPUT]` Highlights FILENAME. OUTPUT can be an output file. Defaults to stdout. 
-* `md-render INFOLDER OUTFOLDER` Basic batch processing. Deprecated in favor of md-render2. 
+* `md-render INFOLDER OUTFOLDER` Basic batch processing. 
+
 ### md-render2
 Intended for batch processing bigger directories. 
 
-* `md-render2 INFOLDER OUTFOLDER` Highlight all *.txt, *.md and files without extension in INFOLDER and save them as FILENAME_WITHOUT_EXTENSION.html in OUTFOLDER. Also adds a navigation  of the form /index => /myfolder/index => /myfolder/myfile. 
-HTML Titles will be added as being the first heading in the rendered files. 
+```
+usage: md-render2.py [-h] [--no-nav] [--render [EXTENSION [EXTENSION ...]]]
+                     [--copy [EXTENSION [EXTENSION ...]] | --no-copy
+                     [EXTENSION [EXTENSION ...]]]
+                     INFOLDER OUTFOLDER
+
+Python Markdown Compiler
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --no-nav              Do not render the navigation menu.
+
+Location:
+  Where to find the source, where to put the rendered files.
+
+  INFOLDER              Input folder.
+  OUTFOLDER             Output folder. Will be created if it does not exist.
+
+File Selection:
+  Which files to render, which to copy.
+
+  --render [EXTENSION [EXTENSION ...]]
+                        Extensions to render. * is a wildcat and means
+                        everything. (Default: ["", "txt", "md"])
+  --copy [EXTENSION [EXTENSION ...]]
+                        Extensions to copy. * is a wildcat and means
+                        everything. (Default: [])
+  --no-copy [EXTENSION [EXTENSION ...]]
+                        Extensions to exclude from copying. (Default: [""])
+```
+
 ## Dependencies
 
 * [python-markdown2](https://github.com/trentm/python-markdown2)
@@ -22,7 +52,9 @@ HTML Titles will be added as being the first heading in the rendered files.
 	* Install: `pip install beautifulsoup4`, `easy_install beautifulsoup4` or the package `beautifulsoup4` in some recent verions of debian / ubuntu
 	* License: MIT license
 
-##License
+* `argparse`  module
+
+## License
 		    DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
 		            Version 2, December 2004
 
