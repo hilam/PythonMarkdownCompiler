@@ -173,7 +173,7 @@ def main(cargs):
 
 	copygroup.add_argument('--copy', help='Extensions to copy. * is a wildcat and means everything. (Default: [])', nargs='*', dest='COPY_INCLUDE', metavar="EXTENSION", default=[])
 
-	copygroup.add_argument('--no-copy', help='Extensions to exclude from copying. (Default: [""])', nargs='*', dest='COPY_EXCLUDE', metavar="EXTENSION", default=[])
+	copygroup.add_argument('--no-copy', help='Extensions to exclude from copying. (Default: [])', nargs='*', dest='COPY_EXCLUDE', metavar="EXTENSION", default=[])
 
 	args = parser.parse_args()
 

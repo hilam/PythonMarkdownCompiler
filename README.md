@@ -39,7 +39,7 @@ File Selection:
                         Extensions to copy. * is a wildcat and means
                         everything. (Default: [])
   --no-copy [EXTENSION [EXTENSION ...]]
-                        Extensions to exclude from copying. (Default: [""])
+                        Extensions to exclude from copying. (Default: [])
 ```
 
 ## Dependencies
