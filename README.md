@@ -3,25 +3,55 @@ Batch compiling markdown files to html using python-markdown2. Tested with Pytho
 ## Usage
 There are 2 versions available. 
 ### md-render
-Deprecated in favor of md-render2. 
+Intended for highlighting single files. 
 
-* `md-render FILENAME [OUTPUT]` Highlights FILENAME. OUTPUT can be an output file. Defaults to stdout. 
-* `md-render INFOLDER OUTFOLDER` Basic batch processing. 
+```
+usage: md-render.py [-h] [-o OUTPUT_FILE] [--title TITLE] [--no-css]
+                    [--body-only] [--header HEADER]
+                    [--body-prefix BODY_PREFIX] [--body-suffix BODY_SUFFIX]
+                    INPUT_FILE
+
+Python Markdown Compiler
+
+positional arguments:
+  INPUT_FILE            Input file.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTPUT_FILE        Output File. Defaults to STDOUT.
+  --title TITLE, -t TITLE
+                        Use a custom html title.
+  --no-css, -u          Do not include stylesheet.
+  --body-only, -b       Generate HTML body only.
+  --header HEADER, -he HEADER
+                        Include a file or a string in the header.
+  --body-prefix BODY_PREFIX, -pre BODY_PREFIX
+                        Include a file or a string before the content in the
+                        body.
+  --body-suffix BODY_SUFFIX, -suf BODY_SUFFIX
+                        Include a file or a string after the content in the
+                        body.
+```
 
 ### md-render2
 Intended for batch processing bigger directories. 
 
 ```
-usage: md-render2.py [-h] [--no-nav] [--render [EXTENSION [EXTENSION ...]]]
+usage: md-render2.py [-h] [--no-nav] [--nav-index INDEX_FILE]
+                     [--render [EXTENSION [EXTENSION ...]]]
                      [--copy [EXTENSION [EXTENSION ...]] | --no-copy
-                     [EXTENSION [EXTENSION ...]]]
+                     [EXTENSION [EXTENSION ...]]] [--body-only] [--no-css]
+                     [--header HEADER] [--body-prefix BODY_PREFIX]
+                     [--body-suffix BODY_SUFFIX] [--title TITLE]
                      INFOLDER OUTFOLDER
 
 Python Markdown Compiler
 
 optional arguments:
   -h, --help            show this help message and exit
-  --no-nav              Do not render the navigation menu.
+  --no-nav, -nn         Do not render the navigation menu.
+  --nav-index INDEX_FILE, -i INDEX_FILE
+                        Navigation Index Filename. Default: "index".
 
 Location:
   Where to find the source, where to put the rendered files.
@@ -32,14 +62,30 @@ Location:
 File Selection:
   Which files to render, which to copy.
 
-  --render [EXTENSION [EXTENSION ...]]
+  --render [EXTENSION [EXTENSION ...]], -r [EXTENSION [EXTENSION ...]]
                         Extensions to render. * is a wildcat and means
                         everything. (Default: ["", "txt", "md"])
-  --copy [EXTENSION [EXTENSION ...]]
+  --copy [EXTENSION [EXTENSION ...]], -c [EXTENSION [EXTENSION ...]]
                         Extensions to copy. * is a wildcat and means
                         everything. (Default: [])
-  --no-copy [EXTENSION [EXTENSION ...]]
+  --no-copy [EXTENSION [EXTENSION ...]], -nc [EXTENSION [EXTENSION ...]]
                         Extensions to exclude from copying. (Default: [])
+
+HTML Content:
+  What to generate in the html
+
+  --body-only, -b       Generate HTML body only.
+  --no-css, -u          Do not include stylesheet.
+  --header HEADER, -he HEADER
+                        Include a file or a string in the header.
+  --body-prefix BODY_PREFIX, -pre BODY_PREFIX
+                        Include a file or a string before the content in the
+                        body.
+  --body-suffix BODY_SUFFIX, -suf BODY_SUFFIX
+                        Include a file or a string after the content in the
+                        body.
+  --title TITLE, -t TITLE
+                        Title to use for document in case no heading is found.
 ```
 
 ## Dependencies
@@ -47,6 +93,7 @@ File Selection:
 * [python-markdown2](https://github.com/trentm/python-markdown2)
 	* Install: `pip install markdown2`, `pypm install markdown2` or `easy_install markdown2`
 	* License: [MIT License](https://github.com/trentm/python-markdown2/blob/master/LICENSE.txt)
+	* for syntax highlighting you might want to install `pygments`. 
 
 * [BeautifulSoup](http://www.crummy.com/software/BeautifulSoup/)
 	* Install: `pip install beautifulsoup4`, `easy_install beautifulsoup4` or the package `beautifulsoup4` in some recent verions of debian / ubuntu

@@ -1,31 +1,138 @@
 import markdown2
 import os, sys, shutil
 from bs4 import BeautifulSoup
+import argparse
 
 
+#Find the first heading of some html. 
 def find_title(html, alt=''):
-	h1 = BeautifulSoup(html).findAll("h1")
-	if(len(h1) > 0):
-		return h1[0].get_text()
-	else:
-		return alt
+	parsed = BeautifulSoup(html)
+	i = 1
+	while(i<7):
+		h = parsed.findAll("h"+str(i))
+		if(len(h) > 0):
+			return h[0].get_text()
+		i=i+1
+	return alt
+# Render a bunch of code. 
+def md_render(code):
+	return markdown2.markdown(code, extras=["footnotes", "fenced-code-blocks", "code-friendly"])
 
-def make_html_code(code, title=None):
+# Trys to read a file
+def try_read(name):
+	try:
+		f = open(name)
+		in_code = f.read()
+		f.close()
+	except IOError as e:
+		print "[!] FATAL (READ): I/O error({0}): {1}".format(e.errno, e.strerror)
+		sys.exit(1)
+	except:
+		print "[!] FATAL (READ): Unexpected error:", sys.exc_info()[0]
+		sys.exit(1)
+	return in_code
 
-	hcode = markdown2.markdown(code, extras=["footnotes", "fenced-code-blocks", "code-friendly"])
+#Trys to write a file. 
+def try_write(output_file, code):
+	try:
+		directory = os.path.dirname("./"+output_file)
 
-	if title == None:
-		title = find_title(hcode)
+		if not os.path.exists(directory):
+			os.makedirs(directory)
 
-	output = """<!DOCTYPE html>
+		f=open(output_file, 'w+')
+		f.write(code)
+		f.close()
+	except IOError as e:
+		print "[!] FATAL (WRITE): I/O error({0}): {1}".format(e.errno, e.strerror)
+		sys.exit(1)
+	except:
+		print "[!] FATAL (WRITE): Unexpected error:", sys.exc_info()[0]
+		sys.exit(1)
+
+#Creates the output surrounding the actual rendering. 
+def output(render, title, body_only = False, css = True, header = "", prefix = "", suffix = ""):
+	output = ""
+	if not body_only:
+		output += """<!DOCTYPE html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
 		<title>"""
-	output += title
-	output +="""</title>
+		output += title
+		output +="""</title>"""
+		if css:
+			output+= """
 		<style type="text/css">
-		/* Basic styles https://gist.github.com/cpatuzzo/3331384 */
+"""+get_css()+"""
+		</style>"""
+
+		output += header
+		"""
+	</head>
+	<body>
+"""
+
+	output += prefix+"\n"
+	output += render
+	output += suffix+"\n"
+
+	if not body_only:
+		output += """
+	</body>
+</html>"""
+
+	return output
+
+#Parse a text either a file or a text. 
+def text_or_file(text):
+	if text == "":
+		return text
+	if os.path.isfile(text):
+		return try_read(text)
+	return text
+
+
+# Main Function running the logic
+def main_run(infile, outfile, title, body, css, header, prefix, suffix):
+	header = text_or_file(header)
+	prefix = text_or_file(prefix)
+	suffix = text_or_file(suffix)
+	render = md_render(try_read(infile))
+	if title == "":
+		title = find_title(render)
+	
+	res = output(render, title, body, css, header, prefix, suffix)
+	if outfile == "":
+		print res
+	else:
+		
+		try_write(outfile, res)
+
+# Main Arg parsing function
+def main(cargs):
+	parser = argparse.ArgumentParser(description='Python Markdown Compiler')
+	parser.add_argument('INPUT_FILE', nargs=1, help='Input file. ')
+	parser.add_argument('-o', nargs=1, default=[""], help="Output File. Defaults to STDOUT. ", metavar="OUTPUT_FILE", dest="OUTPUT_FILE")
+	parser.add_argument('--title', '-t', dest="TITLE", nargs=1, default=[""], metavar="TITLE", help="Use a custom html title. ")
+	parser.add_argument('--no-css','-u', action='store_const', const=False, default=True, dest="MAKE_CSS", help="Do not include stylesheet. ")
+	parser.add_argument('--body-only', '-b', action='store_const', const=True, default=False, dest="BODY_ONLY", help="Generate HTML body only. ")
+	parser.add_argument('--header', '-he', nargs=1, dest="HEADER", metavar="HEADER", help="Include a file or a string in the header. ", default=[""])
+
+	parser.add_argument('--body-prefix', '-pre', nargs=1, dest="BODY_PREFIX", metavar="BODY_PREFIX", help="Include a file or a string before the content in the body. ", default=[""])
+	parser.add_argument('--body-suffix','-suf',  nargs=1, dest="BODY_SUFFIX", metavar="BODY_SUFFIX", help="Include a file or a string after the content in the body. ", default=[""])
+
+	args = parser.parse_args()
+
+	if(os.path.isfile(args.INPUT_FILE[0])):
+		main_run(args.INPUT_FILE[0], args.OUTPUT_FILE[0], args.TITLE[0], args.BODY_ONLY, args.MAKE_CSS, args.HEADER[0], args.BODY_PREFIX[0], args.BODY_SUFFIX[0])
+	else:
+		print "error: INPUT_FILE is not a file. "
+		
+			
+#CSS code stuff
+def get_css():
+	css_code = """/* Basic styles https://gist.github.com/cpatuzzo/3331384 */
 		body {
 		  font-family: Helvetica, arial, sans-serif;
 		  font-size: 14px;
@@ -478,106 +585,8 @@ def make_html_code(code, title=None):
 		.vc { color: #008080 } /* Name.Variable.Class */
 		.vg { color: #008080 } /* Name.Variable.Global */
 		.vi { color: #008080 } /* Name.Variable.Instance */
-		.il { color: #009999 } /* Literal.Number.Integer.Long */
-		</style>
-	</head>
-	<body>
-"""
-	output += hcode
-	output += """
-	</body>
-</html>"""
-	return output
-
-def main_file(in_file, output_file = None):
-	try:
-		f = open(in_file)
-		in_code = f.read()
-		f.close()
-	except IOError as e:
-		print "FATAL: I/O error({0}): {1}".format(e.errno, e.strerror)
-		sys.exit(1)
-	except:
-		print "FATAL: Unexpected error:", sys.exc_info()[0]
-		sys.exit(1)
-
-	code = make_html_code(in_code)
-	
-	if(output_file == None):
-		print code
-	else:
-		try:
-			directory = os.path.dirname(output_file)
-
-			if not os.path.exists(directory):
-				os.makedirs(directory)
-
-			f=open(output_file, 'w+')
-			f.write(code)
-			f.close()
-		except IOError as e:
-			print "FATAL: I/O error({0}): {1}".format(e.errno, e.strerror)
-			sys.exit(1)
-		except:
-			print "FATAL: Unexpected error:", sys.exc_info()[0]
-			sys.exit(1)
-def main_dir(in_folder, out_folder):
-	try:
-		for obj in os.listdir(in_folder):
-			if os.path.isfile(os.path.join(in_folder, obj)):
-				fn, fe = os.path.splitext(obj)
-				if(fe == '' or fe == '.txt' or fe == '.md'):
-					inp = os.path.join(in_folder, obj)
-					outp = os.path.join(out_folder, fn+".html")					
-					main_file(inp, outp)
-					print "[M] "+inp+" > "+outp
-				else:
-					inp = os.path.join(in_folder, obj)
-					outp = os.path.join(out_folder, fn+".html")	
-					shutil.copy(inp, outp)
-					print "[C] "+inp+" > "+outp
-			else:
-				main_dir(os.path.join(in_folder, obj), os.path.join(out_folder, obj))
-	except IOError as e:
-		print "FATAL: I/O error({0}): {1}".format(e.errno, e.strerror)
-		sys.exit(1)
-	except SystemExit as e:
-		raise e
-	except:
-		print "FATAL: Unexpected error:", sys.exc_info()[0]
-		sys.exit(1)
-
-def main(args):
-	if(len(args) > 0):
-		if(args[0] == '--help'):
-			print "Github Markdown Renderer"
-			print "Usage: md-render FILENAME [OUTPUT]"
-			print "       Markup of FILENAME only. OUTPUT defaults to STDOUT. "
-			print "Usage: md-render INFOLDER OUTFOLDER"
-			print "       Markup of '', '.txt', '.md' files in INFOLDER. Everything else is copied. "
-			sys.exit(0)
-		fsobj = args[0]
-		if(os.path.isfile(fsobj)):
-			if(len(args) > 1):
-				main_file(os.path.abspath(fsobj), os.path.abspath(args[1]))
-			else:
-				main_file(os.path.abspath(fsobj))
-			sys.exit(0)
-		elif(os.path.isdir(fsobj)):
-			if(len(args) > 1):
-				main_dir(fsobj, args[1])
-				sys.exit(0)
-			else:
-				print "FATAL: To few arguments: Missing Output folder. "
-				sys.exit(1)
-			
-		else:
-			print "FATAL: Source File(s) not found. "
-			sys.exit(1)
-	else:
-		print "FATAL: Nothing to do. Type md-render --help for help. "
-		sys.exit(1)
-			
+		.il { color: #009999 } /* Literal.Number.Integer.Long */"""
+	return css_code
 
 if __name__ == "__main__":
-	main(sys.argv[1:])
+	main(sys.argv)
