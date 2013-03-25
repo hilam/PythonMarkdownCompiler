@@ -127,7 +127,7 @@ def main(cargs):
 	if(os.path.isfile(args.INPUT_FILE[0])):
 		main_run(args.INPUT_FILE[0], args.OUTPUT_FILE[0], args.TITLE[0], args.BODY_ONLY, args.MAKE_CSS, args.HEADER[0], args.BODY_PREFIX[0], args.BODY_SUFFIX[0])
 	else:
-		print "error: INPUT_FILE is not a file. "
+		print "[!] INPUT_FILE is not a file. "
 		
 			
 #CSS code stuff

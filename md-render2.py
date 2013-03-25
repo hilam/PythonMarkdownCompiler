@@ -234,7 +234,7 @@ def main(cargs):
 				sys.exit(1)
 		main_run(args.INFOLDER[0], args.OUTFOLDER[0], args.enable_nav, args.RENDER, copycond, args.NAV_INDEX[0], args.BODY_ONLY, args.MAKE_CSS, args.HEADER[0], args.BODY_PREFIX[0], args.BODY_SUFFIX[0], args.ALT_TITLE[0])
 	else:
-		print "error: INFOLDER is not a directory. "
+		print "[!] FATAL: INFOLDER is not a directory. "
 		
 			
 #CSS code stuff
