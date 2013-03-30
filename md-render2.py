@@ -58,7 +58,7 @@ def try_write(output_file, code):
 		sys.exit(1)
 
 #Adds a new code file to the list
-def add_code(dic, base, path, output, source, index='index', alt_title=""):
+def add_code(dic, base, path, output, source, index='index', alt_title="", ext="html"):
 	newCode = {"source": source, "render":md_render(source)}
 	newCode["title"] = find_title(newCode["render"], alt_title)
 	rpath,e = os.path.splitext(os.path.relpath(path, base))
@@ -72,29 +72,29 @@ def add_code(dic, base, path, output, source, index='index', alt_title=""):
 		if f!="":
 			if(p!=''):
 				plist.insert(0, p+"/"+index)
-				plist2.insert(0, os.path.relpath(p+"/"+index+".html", opth))
+				plist2.insert(0, os.path.relpath(p+"/"+index+"."+ext, opth))
 			else:
 				plist.insert(0, index)
-				plist2.insert(0, os.path.relpath(index+".html", opth))
+				plist2.insert(0, os.path.relpath(index+"."+ext, opth))
 		else:
 			break
 	newCode["path"] = f7(plist)
 	newCode["pathH"] = f7(plist2)
-	newCode["target"] = os.path.join(output, rpath+".html")
+	newCode["target"] = os.path.join(output, rpath+"."+ext)
 	dic[rpath] = newCode
 	return dic
 #wrapper function for above
-def iterate_file(base, out_folder, in_file, dic, index, alt_title):
-	dic = add_code(dic, base, in_file, out_folder, try_read(in_file), index, alt_title)
+def iterate_file(base, out_folder, in_file, dic, index, alt_title, ext):
+	dic = add_code(dic, base, in_file, out_folder, try_read(in_file), index, alt_title, ext)
 	return dic
 	
 #iterate over a folder. 
-def iterate_folder(base, in_folder, out_folder, dic, render_extensions, copycond, index, alt_title):
+def iterate_folder(base, in_folder, out_folder, dic, render_extensions, copycond, index, alt_title, ext):
 	for obj in os.listdir(in_folder):
 		if os.path.isfile(os.path.join(in_folder, obj)):
 			fn, fe = os.path.splitext(obj)
 			if(fe[1:] in render_extensions or "*" in render_extensions):	
-				dic = iterate_file(base, out_folder, os.path.join(in_folder, obj), dic, index, alt_title)
+				dic = iterate_file(base, out_folder, os.path.join(in_folder, obj), dic, index, alt_title, ext)
 				print "[R] "+os.path.join(in_folder, obj)
 			elif copycond(fe[1:]):
 				inp = os.path.join(in_folder, obj)
@@ -103,7 +103,7 @@ def iterate_folder(base, in_folder, out_folder, dic, render_extensions, copycond
 				print "[C] "+inp
 
 		else:
-			dic = iterate_folder(base, os.path.join(in_folder, obj), out_folder, dic, render_extensions, copycond, index, alt_title)
+			dic = iterate_folder(base, os.path.join(in_folder, obj), out_folder, dic, render_extensions, copycond, index, alt_title, ext)
 	return dic
 
 #Makes the navigational menu
@@ -165,11 +165,11 @@ def text_or_file(text):
 
 
 # Main Function running the logic
-def main_run(infolder, outfolder, enable_nav, render_extensions, copycond, index, body_only, css, header, prefix, suffix, alt_title):
+def main_run(infolder, outfolder, enable_nav, render_extensions, copycond, index, body_only, css, header, prefix, suffix, alt_title, ext="html"):
 	header = text_or_file(header)
 	prefix = text_or_file(prefix)
 	suffix = text_or_file(suffix)
-	dic = iterate_folder(infolder, infolder, outfolder, {}, render_extensions, copycond, index, alt_title)
+	dic = iterate_folder(infolder, infolder, outfolder, {}, render_extensions, copycond, index, alt_title, ext)
 	for key in dic:
 		if enable_nav:
 			dic = make_nav(dic, key, prefix, suffix)
@@ -191,6 +191,7 @@ def main(cargs):
 
 	group0.add_argument('INFOLDER', nargs=1, help='Input folder. ')
 	group0.add_argument('OUTFOLDER', nargs=1, help='Output folder. Will be created if it does not exist. ')
+	group0.add_argument('--extension', '-e', nargs=1, help='Extension of output files. Default: "html". ', dest="ext", default=["html"], metavar="EXTENSION")
 
 	group1 = parser.add_argument_group('File Selection', 'Which files to render, which to copy. ')
 
@@ -232,7 +233,7 @@ def main(cargs):
 			except:
 				print "[!] FATAL: Can't create output folder (Enough permissions?)"
 				sys.exit(1)
-		main_run(args.INFOLDER[0], args.OUTFOLDER[0], args.enable_nav, args.RENDER, copycond, args.NAV_INDEX[0], args.BODY_ONLY, args.MAKE_CSS, args.HEADER[0], args.BODY_PREFIX[0], args.BODY_SUFFIX[0], args.ALT_TITLE[0])
+		main_run(args.INFOLDER[0], args.OUTFOLDER[0], args.enable_nav, args.RENDER, copycond, args.NAV_INDEX[0], args.BODY_ONLY, args.MAKE_CSS, args.HEADER[0], args.BODY_PREFIX[0], args.BODY_SUFFIX[0], args.ALT_TITLE[0], args.ext[0])
 	else:
 		print "[!] FATAL: INFOLDER is not a directory. "
 		

@@ -38,6 +38,7 @@ Intended for batch processing bigger directories.
 
 ```
 usage: md-render2.py [-h] [--no-nav] [--nav-index INDEX_FILE]
+                     [--extension EXTENSION]
                      [--render [EXTENSION [EXTENSION ...]]]
                      [--copy [EXTENSION [EXTENSION ...]] | --no-copy
                      [EXTENSION [EXTENSION ...]]] [--body-only] [--no-css]
@@ -58,6 +59,8 @@ Location:
 
   INFOLDER              Input folder.
   OUTFOLDER             Output folder. Will be created if it does not exist.
+  --extension EXTENSION, -e EXTENSION
+                        Extension of output files. Default: "html".
 
 File Selection:
   Which files to render, which to copy.
