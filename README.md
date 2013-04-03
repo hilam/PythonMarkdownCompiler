@@ -42,8 +42,10 @@ usage: md-render2.py [-h] [--no-nav] [--nav-index INDEX_FILE]
                      [--render [EXTENSION [EXTENSION ...]]]
                      [--copy [EXTENSION [EXTENSION ...]] | --no-copy
                      [EXTENSION [EXTENSION ...]]] [--body-only] [--no-css]
+                     [--no-resolve-links] [--no-resolve-warnings]
                      [--header HEADER] [--body-prefix BODY_PREFIX]
                      [--body-suffix BODY_SUFFIX] [--title TITLE]
+                     [--fallback-title TITLE]
                      INFOLDER OUTFOLDER
 
 Python Markdown Compiler
@@ -79,6 +81,10 @@ HTML Content:
 
   --body-only, -b       Generate HTML body only.
   --no-css, -u          Do not include stylesheet.
+  --no-resolve-links, -nl
+                        Do not resolve local links.
+  --no-resolve-warnings, -q
+                        Do not warn about undefined local links.
   --header HEADER, -he HEADER
                         Include a file or a string in the header.
   --body-prefix BODY_PREFIX, -pre BODY_PREFIX
@@ -88,6 +94,9 @@ HTML Content:
                         Include a file or a string after the content in the
                         body.
   --title TITLE, -t TITLE
+                        Title to use for documents. % will be replace with the
+                        actual title.
+  --fallback-title TITLE, -ft TITLE
                         Title to use for document in case no heading is found.
 ```
 

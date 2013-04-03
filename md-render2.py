@@ -1,7 +1,5 @@
-import markdown2
-import os, sys, shutil
+import os, sys, shutil, argparse, urlparse, posixpath, re, markdown2
 from bs4 import BeautifulSoup
-import argparse
 
 
 #Find the first heading of some html. 
@@ -17,6 +15,51 @@ def find_title(html, alt=''):
 # Render a bunch of code. 
 def md_render(code):
 	return markdown2.markdown(code, extras=["footnotes", "fenced-code-blocks", "code-friendly"])
+
+#Creates a relative url from http://stackoverflow.com/questions/7469573/how-to-construct-relative-url-given-two-absolute-urls-in-python
+def relative_url(destination, source):
+    u_dest = urlparse.urlsplit(destination)
+    u_src = urlparse.urlsplit(source)
+
+    _uc1 = urlparse.urlunsplit(u_dest[:2]+tuple('' for i in range(3)))
+    _uc2 = urlparse.urlunsplit(u_src[:2]+tuple('' for i in range(3)))
+
+    if _uc1 != _uc2:
+        ## This is a different domain
+        return destination
+
+    _relpath = posixpath.relpath(u_dest.path, posixpath.dirname(u_src.path))
+
+    return urlparse.urlunsplit(('', '', _relpath, u_dest.query, u_dest.fragment))
+
+def update_link(target, me, doc, warn):
+	reltarget = urlparse.urljoin(doc[me]["org"], target)
+	parsed = urlparse.urlparse(reltarget)
+	path = parsed.path
+	query = parsed.query
+	fragment = parsed.fragment
+	if path == "/" or parsed.scheme == 'http' or parsed.scheme == 'https':
+		return target
+	else:
+		# find path in doc
+		for key in doc:
+			if doc[key]["org"]==path:
+				res = relative_url(doc[key]["target"], doc[me]["target"])
+				if query != "":
+					res += "?"+query
+				if fragment != "":
+					res += "#"+fragment
+				return res
+	if warn:
+		print "[!] Unresolved local reference: '"+target+"' in '"+doc[me]["org"]+"'"
+	return target
+
+def replace_link(match, me, doc, warn):
+	return "<a href=\""+update_link(match.group(1), me, doc, warn)
+
+def resolve_links(me, doc, warn):
+	html = doc[me]["render"]
+	return re.sub(r'<a href=[\'"]?([^\'" >]+)', lambda x: replace_link(x, me, doc, warn), html)
 
 #Remove doubles from a list in a quick and fancy way
 # Source: http://www.peterbe.com/plog/uniqifiers-benchmark
@@ -59,7 +102,7 @@ def try_write(output_file, code):
 
 #Adds a new code file to the list
 def add_code(dic, base, path, output, source, index='index', alt_title="", ext="html"):
-	newCode = {"source": source, "render":md_render(source)}
+	newCode = {"source": source, "render":md_render(source), "org": os.path.relpath(path, base)}
 	newCode["title"] = find_title(newCode["render"], alt_title)
 	rpath,e = os.path.splitext(os.path.relpath(path, base))
 	plist = [rpath]
@@ -123,7 +166,7 @@ def make_nav(dic, key, prefix, suffix):
 	return dic
 
 #Creates the output surrounding the actual rendering. 
-def output(dic, key, body_only = False, css = True, header = ""):
+def output(dic, key, body_only = False, css = True, header = "", match_title="%"):
 	me = dic[key]
 	output = ""
 	if not body_only:
@@ -132,7 +175,7 @@ def output(dic, key, body_only = False, css = True, header = ""):
 	<head>
 		<meta charset="utf-8">
 		<title>"""
-		output += me["title"]
+		output += match_title.replace("%", me["title"])
 		output +="""</title>"""
 		if css:
 			output+= """
@@ -165,18 +208,20 @@ def text_or_file(text):
 
 
 # Main Function running the logic
-def main_run(infolder, outfolder, enable_nav, render_extensions, copycond, index, body_only, css, header, prefix, suffix, alt_title, ext="html"):
+def main_run(infolder, outfolder, enable_nav, render_extensions, copycond, index, body_only, css, header, prefix, suffix, alt_title, ext, r_links, warn_links, match_title):
 	header = text_or_file(header)
 	prefix = text_or_file(prefix)
 	suffix = text_or_file(suffix)
 	dic = iterate_folder(infolder, infolder, outfolder, {}, render_extensions, copycond, index, alt_title, ext)
 	for key in dic:
+		if r_links:
+			dic[key]["render"] = resolve_links(key, dic, warn_links)
 		if enable_nav:
 			dic = make_nav(dic, key, prefix, suffix)
 		else:
 			dic[key]["render"] = prefix+dic[key]["render"]+suffix
 			
-		output(dic, key, body_only, css, header)
+		output(dic, key, body_only, css, header, match_title)
 
 # Main Arg parsing function
 def main(cargs):
@@ -207,12 +252,17 @@ def main(cargs):
 	
 	group2.add_argument('--body-only', '-b', action='store_const', const=True, default=False, dest="BODY_ONLY", help="Generate HTML body only. ")
 	group2.add_argument('--no-css', '-u', action='store_const', const=False, default=True, dest="MAKE_CSS", help="Do not include stylesheet. ")
-	group2.add_argument('--header', '-he', nargs=1, dest="HEADER", metavar="HEADER", help="Include a file or a string in the header. ", default=[""])
 
+	group2.add_argument('--no-resolve-links', '-nl', dest="RESOLVE_LINKS", help="Do not resolve local links. ", default=True, action="store_false")
+	group2.add_argument('--no-resolve-warnings', '-q', dest="LINK_WARN", help="Do not warn about undefined local links. ", default=True, action="store_false")
+
+
+	group2.add_argument('--header', '-he', nargs=1, dest="HEADER", metavar="HEADER", help="Include a file or a string in the header. ", default=[""])
 	group2.add_argument('--body-prefix', '-pre', nargs=1, dest="BODY_PREFIX", metavar="BODY_PREFIX", help="Include a file or a string before the content in the body. ", default=[""])
 	group2.add_argument('--body-suffix', '-suf', nargs=1, dest="BODY_SUFFIX", metavar="BODY_SUFFIX", help="Include a file or a string after the content in the body. ", default=[""])
 
-	group2.add_argument('--title', '-t', nargs=1, dest="ALT_TITLE", metavar="TITLE", help="Title to use for document in case no heading is found. ", default=[""])
+	group2.add_argument('--title', '-t', nargs=1, dest="MATCH_TITLE", metavar="TITLE", help="Title to use for documents. %% will be replace with the actual title. ", default=["%"])
+	group2.add_argument('--fallback-title', '-ft', nargs=1, dest="ALT_TITLE", metavar="TITLE", help="Title to use for document in case no heading is found. ", default=[""])
 
 	args = parser.parse_args()
 
@@ -233,7 +283,7 @@ def main(cargs):
 			except:
 				print "[!] FATAL: Can't create output folder (Enough permissions?)"
 				sys.exit(1)
-		main_run(args.INFOLDER[0], args.OUTFOLDER[0], args.enable_nav, args.RENDER, copycond, args.NAV_INDEX[0], args.BODY_ONLY, args.MAKE_CSS, args.HEADER[0], args.BODY_PREFIX[0], args.BODY_SUFFIX[0], args.ALT_TITLE[0], args.ext[0])
+		main_run(args.INFOLDER[0], args.OUTFOLDER[0], args.enable_nav, args.RENDER, copycond, args.NAV_INDEX[0], args.BODY_ONLY, args.MAKE_CSS, args.HEADER[0], args.BODY_PREFIX[0], args.BODY_SUFFIX[0], args.ALT_TITLE[0], args.ext[0], args.RESOLVE_LINKS, args.LINK_WARN, args.MATCH_TITLE[0])
 	else:
 		print "[!] FATAL: INFOLDER is not a directory. "
 		
