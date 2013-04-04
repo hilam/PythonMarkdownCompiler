@@ -124,6 +124,7 @@ def add_code(dic, base, path, output, source, index='index', alt_title="", ext="
 	newCode["path"] = f7(plist)
 	newCode["pathH"] = f7(plist2)
 	newCode["target"] = os.path.join(output, rpath+"."+ext)
+	newCode["targetR"] = rpath+"."+ext
 	dic[rpath] = newCode
 	return dic
 #wrapper function for above
@@ -198,6 +199,7 @@ def output(dic, key, body_only = False, css = True, header = "", match_title="%"
 
 	try_write(me["target"], output)
 
+
 #Parse a text either a file or a text. 
 def text_or_file(text):
 	if text == "":
@@ -206,13 +208,52 @@ def text_or_file(text):
 		return try_read(text)
 	return text
 
+def make_sitemap(base, output, index, alt_title, ext, filename, hardcopy, title, dic):
+	if filename in dic: 
+		del dic[filename]
+
+	myPth = os.path.join(base, filename)
+	pth,f = os.path.split(myPth)
+	targetH = os.path.join(base, filename)
+	rpath = os.path.relpath(targetH, base)
+
+	code = "# "+title+"\n\n"
+	codeH = "# "+title+"\n\n" 
+
+	dic = add_code(dic, base, targetH, output, code, index, alt_title, ext)
+
+	dic_keys = sorted(dic.keys())
+
+	for key in dic_keys:
+		code += "* ["+dic[key]["title"]+"]("+relative_url(dic[key]["org"], rpath)+") ("+relative_url(dic[key]["targetR"], rpath)+")\n"
+		codeH += "* ["+dic[key]["title"]+"]("+relative_url(dic[key]["org"], rpath+"/")+") ("+relative_url(dic[key]["org"], rpath)+")\n"
+
+
+	if hardcopy:
+		
+		print "[SH] "+targetH
+		try_write(targetH, codeH)
+
+
+	print "[S] "+targetH
+	dic = add_code(dic, base, targetH, output, code, index, alt_title, ext)
+			
+	
+	 
+		
+
 
 # Main Function running the logic
-def main_run(infolder, outfolder, enable_nav, render_extensions, copycond, index, body_only, css, header, prefix, suffix, alt_title, ext, r_links, warn_links, match_title):
+def main_run(infolder, outfolder, enable_nav, render_extensions, copycond, index, body_only, css, header, prefix, suffix, alt_title, ext, r_links, warn_links, match_title, sitemap, sitemap_hardcopy, sitemap_title):
 	header = text_or_file(header)
 	prefix = text_or_file(prefix)
 	suffix = text_or_file(suffix)
 	dic = iterate_folder(infolder, infolder, outfolder, {}, render_extensions, copycond, index, alt_title, ext)
+
+	if sitemap != "":
+		make_sitemap(infolder, outfolder, index, alt_title, ext, sitemap, sitemap_hardcopy, sitemap_title, dic)
+	
+	
 	for key in dic:
 		if r_links:
 			dic[key]["render"] = resolve_links(key, dic, warn_links)
@@ -226,11 +267,6 @@ def main_run(infolder, outfolder, enable_nav, render_extensions, copycond, index
 # Main Arg parsing function
 def main(cargs):
 	parser = argparse.ArgumentParser(description='Python Markdown Compiler')
-	parser.add_argument('--no-nav', '-nn', dest='enable_nav', action='store_const',
-                   const=False, default=True,
-                   help='Do not render the navigation menu. ')
-
-	parser.add_argument('--nav-index', '-i', help='Navigation Index Filename. Default: "index". ', nargs=1, dest='NAV_INDEX', metavar="INDEX_FILE", default=["index"])
 
 	group0 = parser.add_argument_group('Location', 'Where to find the source, where to put the rendered files. ')
 
@@ -247,6 +283,19 @@ def main(cargs):
 	copygroup.add_argument('--copy', '-c', help='Extensions to copy. * is a wildcat and means everything. (Default: [])', nargs='*', dest='COPY_INCLUDE', metavar="EXTENSION", default=[])
 
 	copygroup.add_argument('--no-copy', '-nc', help='Extensions to exclude from copying. (Default: [])', nargs='*', dest='COPY_EXCLUDE', metavar="EXTENSION", default=[])
+
+	groups = parser.add_argument_group('Sidebar & Navigation', 'How to create navigation and sidebar. ')
+
+	groups.add_argument('--no-nav', '-nn', dest='enable_nav', action='store_const',
+                   const=False, default=True,
+                   help='Do not render the navigation menu. ')
+
+	groups.add_argument('--nav-index', '-i', help='Navigation Index Filename. Default: "index". ', nargs=1, dest='NAV_INDEX', metavar="INDEX_FILE", default=["index"])	
+
+	groups.add_argument('--sitemap', '-s', help='Create a sitemap as internal reference to FILENAME. Will overwrite any existing file of the same name. ', nargs=1, dest='SITEMAP_FN', metavar="FILENAME", default=[""])
+	groups.add_argument('--sitemap-hardcopy', '-sh', help='Write an md version of the sidebar into the source directory. ', dest="SITEMAP_HC", action="store_true", default=False)
+	groups.add_argument('--sitemap-title', '-st', help='Sitemap title. Default: "Sitemap". ', nargs=1, dest='SITEMAP_TITLE', metavar="SITEMAP_TITLE", default=["Sitemap"])
+
 
 	group2 = parser.add_argument_group('HTML Content', 'What to generate in the html')
 	
@@ -283,7 +332,7 @@ def main(cargs):
 			except:
 				print "[!] FATAL: Can't create output folder (Enough permissions?)"
 				sys.exit(1)
-		main_run(args.INFOLDER[0], args.OUTFOLDER[0], args.enable_nav, args.RENDER, copycond, args.NAV_INDEX[0], args.BODY_ONLY, args.MAKE_CSS, args.HEADER[0], args.BODY_PREFIX[0], args.BODY_SUFFIX[0], args.ALT_TITLE[0], args.ext[0], args.RESOLVE_LINKS, args.LINK_WARN, args.MATCH_TITLE[0])
+		main_run(args.INFOLDER[0], args.OUTFOLDER[0], args.enable_nav, args.RENDER, copycond, args.NAV_INDEX[0], args.BODY_ONLY, args.MAKE_CSS, args.HEADER[0], args.BODY_PREFIX[0], args.BODY_SUFFIX[0], args.ALT_TITLE[0], args.ext[0], args.RESOLVE_LINKS, args.LINK_WARN, args.MATCH_TITLE[0], args.SITEMAP_FN[0], args.SITEMAP_HC, args.SITEMAP_TITLE[0])
 	else:
 		print "[!] FATAL: INFOLDER is not a directory. "
 		

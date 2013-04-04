@@ -37,24 +37,22 @@ optional arguments:
 Intended for batch processing bigger directories. 
 
 ```
-usage: md-render2.py [-h] [--no-nav] [--nav-index INDEX_FILE]
-                     [--extension EXTENSION]
+usage: md-render2.py [-h] [--extension EXTENSION]
                      [--render [EXTENSION [EXTENSION ...]]]
                      [--copy [EXTENSION [EXTENSION ...]] | --no-copy
-                     [EXTENSION [EXTENSION ...]]] [--body-only] [--no-css]
-                     [--no-resolve-links] [--no-resolve-warnings]
-                     [--header HEADER] [--body-prefix BODY_PREFIX]
-                     [--body-suffix BODY_SUFFIX] [--title TITLE]
-                     [--fallback-title TITLE]
+                     [EXTENSION [EXTENSION ...]]] [--no-nav]
+                     [--nav-index INDEX_FILE] [--sitemap FILENAME]
+                     [--sitemap-hardcopy] [--sitemap-title SITEMAP_TITLE]
+                     [--body-only] [--no-css] [--no-resolve-links]
+                     [--no-resolve-warnings] [--header HEADER]
+                     [--body-prefix BODY_PREFIX] [--body-suffix BODY_SUFFIX]
+                     [--title TITLE] [--fallback-title TITLE]
                      INFOLDER OUTFOLDER
 
 Python Markdown Compiler
 
 optional arguments:
   -h, --help            show this help message and exit
-  --no-nav, -nn         Do not render the navigation menu.
-  --nav-index INDEX_FILE, -i INDEX_FILE
-                        Navigation Index Filename. Default: "index".
 
 Location:
   Where to find the source, where to put the rendered files.
@@ -75,6 +73,21 @@ File Selection:
                         everything. (Default: [])
   --no-copy [EXTENSION [EXTENSION ...]], -nc [EXTENSION [EXTENSION ...]]
                         Extensions to exclude from copying. (Default: [])
+
+Sidebar & Navigation:
+  How to create navigation and sidebar.
+
+  --no-nav, -nn         Do not render the navigation menu.
+  --nav-index INDEX_FILE, -i INDEX_FILE
+                        Navigation Index Filename. Default: "index".
+  --sitemap FILENAME, -s FILENAME
+                        Create a sitemap as internal reference to FILENAME.
+                        Will overwrite any existing file of the same name.
+  --sitemap-hardcopy, -sh
+                        Write an md version of the sidebar into the source
+                        directory.
+  --sitemap-title SITEMAP_TITLE, -st SITEMAP_TITLE
+                        Sitemap title. Default: "Sitemap".
 
 HTML Content:
   What to generate in the html
@@ -98,6 +111,7 @@ HTML Content:
                         actual title.
   --fallback-title TITLE, -ft TITLE
                         Title to use for document in case no heading is found.
+
 ```
 
 ## Dependencies
