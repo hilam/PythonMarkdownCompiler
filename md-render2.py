@@ -285,7 +285,7 @@ def main(cargs):
 
 	copygroup.add_argument('--no-copy', '-nc', help='Extensions to exclude from copying. (Default: [])', nargs='*', dest='COPY_EXCLUDE', metavar="EXTENSION", default=[])
 
-	groups = parser.add_argument_group('Sidebar & Navigation', 'How to create navigation and sidebar. ')
+	groups = parser.add_argument_group('Sitemap & Navigation', 'How to create navigation and sitemap. ')
 
 	groups.add_argument('--no-nav', '-nn', dest='enable_nav', action='store_const',
                    const=False, default=True,

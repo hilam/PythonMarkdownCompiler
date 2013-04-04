@@ -74,8 +74,8 @@ File Selection:
   --no-copy [EXTENSION [EXTENSION ...]], -nc [EXTENSION [EXTENSION ...]]
                         Extensions to exclude from copying. (Default: [])
 
-Sidebar & Navigation:
-  How to create navigation and sidebar.
+Sitemap & Navigation:
+  How to create navigation and sitemap.
 
   --no-nav, -nn         Do not render the navigation menu.
   --nav-index INDEX_FILE, -i INDEX_FILE
