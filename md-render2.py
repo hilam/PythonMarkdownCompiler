@@ -224,10 +224,11 @@ def make_sitemap(base, output, index, alt_title, ext, filename, hardcopy, title,
 
 	dic_keys = sorted(dic.keys())
 
-	for key in dic_keys:
-		code += "* ["+dic[key]["title"]+"]("+relative_url(dic[key]["org"], rpath)+") ("+relative_url(dic[key]["targetR"], rpath)+")\n"
-		codeH += "* ["+dic[key]["title"]+"]("+relative_url(dic[key]["org"], rpath+"/")+") ("+relative_url(dic[key]["org"], rpath)+")\n"
+	
 
+	for key in dic_keys:
+		code += "* ["+dic[key]["title"]+"]("+relative_url(dic[key]["org"], rpath)+") ("+dic[key]["targetR"]+")\n"
+		codeH += "* ["+dic[key]["title"]+"]("+relative_url(dic[key]["org"], rpath)+") ("+dic[key]["org"]+")\n"
 
 	if hardcopy:
 		
