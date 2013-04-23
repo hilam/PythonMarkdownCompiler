@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 import os, sys, shutil, argparse, urlparse, posixpath, re, markdown2
 from bs4 import BeautifulSoup
 
@@ -185,7 +187,7 @@ def output(dic, key, body_only = False, css = True, header = "", match_title="%"
 		</style>"""
 
 		output += header
-		"""
+		output += """
 	</head>
 	<body>
 """

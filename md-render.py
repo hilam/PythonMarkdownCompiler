@@ -1,8 +1,7 @@
-import markdown2
-import os, sys, shutil
-from bs4 import BeautifulSoup
-import argparse
+#/usr/bin/env python
 
+import markdown2, os, sys, shutil, argparse
+from bs4 import BeautifulSoup
 
 #Find the first heading of some html. 
 def find_title(html, alt=''):
@@ -68,7 +67,7 @@ def output(render, title, body_only = False, css = True, header = "", prefix = "
 		</style>"""
 
 		output += header
-		"""
+		output += """
 	</head>
 	<body>
 """
