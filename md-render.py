@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python2
 
 import markdown2, os, sys, shutil, argparse
 from bs4 import BeautifulSoup
